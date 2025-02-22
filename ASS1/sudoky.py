@@ -1,9 +1,9 @@
-import time
-import tracemalloc
 import tkinter as tk
 from tkinter import messagebox
 import random
 import heapq
+import time
+import tracemalloc
 
 def is_valid(board, row, col, num):
     for i in range(9):
@@ -25,6 +25,10 @@ def dfs_solve(board):
                 for num in range(1, 10):
                     if is_valid(board, row, col, num):
                         board[row][col] = num
+                        entries[row][col].delete(0, tk.END)
+                        entries[row][col].insert(0, str(num))
+                        entries[row][col].config(fg="blue")
+                        root.update_idletasks()
                         if dfs_solve(board):
                             return True
                         board[row][col] = 0
@@ -46,7 +50,7 @@ def heuristic_solve(board):
     empty_cells = [(len(find_candidates(board, row, col)), row, col)
                    for row in range(9) for col in range(9) if board[row][col] == 0]
     heapq.heapify(empty_cells)
-
+    
     def backtrack():
         if not empty_cells:
             return True
@@ -56,30 +60,18 @@ def heuristic_solve(board):
 
         for num in candidates:
             board[row][col] = num
+            entries[row][col].delete(0, tk.END)
+            entries[row][col].insert(0, str(num))
+            entries[row][col].config(fg="blue")
+            root.update_idletasks()
             if backtrack():
                 return True
             board[row][col] = 0
 
         heapq.heappush(empty_cells, (len(candidates), row, col))
         return False
-
+    
     return backtrack()
-
-def measure_performance(board, solve_function, method_name):
-    tracemalloc.start()  # Bắt đầu theo dõi bộ nhớ
-    start_time = time.time()  # Lấy thời gian bắt đầu
-
-    solved_board = [row[:] for row in board]  # Sao chép mảng để không làm thay đổi mảng gốc
-    success = solve_function(solved_board)
-
-    end_time = time.time()  # Lấy thời gian kết thúc
-    memory_used = tracemalloc.get_traced_memory()[1] / 1024  # Lấy bộ nhớ tối đa sử dụng (KB)
-    tracemalloc.stop()  # Dừng theo dõi bộ nhớ
-
-    print(f"📌 {method_name}:")
-    print(f"   ✅ Đã giải: {'Thành công' if success else 'Thất bại'}")
-    print(f"   ⏳ Thời gian chạy: {end_time - start_time:.6f} giây")
-    print(f"   💾 Bộ nhớ tiêu thụ: {memory_used:.2f} KB\n")
 
 def generate_board():
     board = [[0] * 9 for _ in range(9)]
@@ -92,9 +84,99 @@ def generate_board():
         board[row][col] = num
     return board
 
-# Tạo một bảng Sudoku và đo hiệu suất
-board = generate_board()
+def measure_performance(algorithm, board):
+    board_copy = [row[:] for row in board]
+    tracemalloc.start()
+    start_time = time.perf_counter()
+    success = algorithm(board_copy)
+    end_time = time.perf_counter()
+    memory_used = tracemalloc.get_traced_memory()[1] / 1024
+    tracemalloc.stop()
+    execution_time = end_time - start_time
+    return execution_time, memory_used, success
 
-print("⚡ Đánh giá hiệu suất các thuật toán giải Sudoku ⚡")
-measure_performance(board, dfs_solve, "DFS (Backtracking)")
-measure_performance(board, heuristic_solve, "Heuristic (A*)")
+def solve_with_dfs():
+    global board, entries
+    dfs_time, dfs_memory, dfs_success = measure_performance(dfs_solve, board)
+    
+    solved_board = [row[:] for row in board]
+    if dfs_success:
+        dfs_solve(solved_board)
+    else:
+        messagebox.showerror("Error", "AI DFS could not solve the Sudoku.")
+        return
+    
+    messagebox.showinfo("Performance", f"DFS: {dfs_time:.4f}s, {dfs_memory:.2f}KB")
+
+def solve_with_heuristic():
+    global board, entries
+    heuristic_time, heuristic_memory, heuristic_success = measure_performance(heuristic_solve, board)
+    
+    solved_board = [row[:] for row in board]
+    if heuristic_success:
+        heuristic_solve(solved_board)
+    else:
+        messagebox.showerror("Error", "AI Heuristic could not solve the Sudoku.")
+        return
+    
+    messagebox.showinfo("Performance", f"Heuristic: {heuristic_time:.4f}s, {heuristic_memory:.2f}KB")
+
+def check_solution():
+    for row in range(9):
+        for col in range(9):
+            num = entries[row][col].get()
+            if not num.isdigit() or not (1 <= int(num) <= 9):
+                messagebox.showerror("Error", "Invalid input! Only numbers 1-9 are allowed.")
+                return
+            board[row][col] = int(num)
+    
+    if heuristic_solve([row[:] for row in board]) or dfs_solve([row[:] for row in board]):
+        messagebox.showinfo("Success", "Congratulations! You solved the Sudoku!")
+    else:
+        messagebox.showerror("Error", "Incorrect solution. Try again!")
+
+def new_game():
+    global board, entries
+    board = generate_board()
+    for i in range(9):
+        for j in range(9):
+            entries[i][j].config(state='normal')
+            entries[i][j].delete(0, tk.END)
+            if board[i][j] != 0:
+                entries[i][j].insert(0, str(board[i][j]))
+                entries[i][j].config(state='disabled')
+
+def create_ui():
+    global root, entries, board
+    root = tk.Tk()
+    root.title("Sudoku Game")
+    
+    board = generate_board()
+    entries = []
+    
+    for i in range(9):
+        row_entries = []
+        for j in range(9):
+            entry = tk.Entry(root, width=3, font=('Arial', 18), justify='center')
+            entry.grid(row=i, column=j, padx=2, pady=2)
+            if board[i][j] != 0:
+                entry.insert(0, str(board[i][j]))
+                entry.config(state='disabled')
+            row_entries.append(entry)
+        entries.append(row_entries)
+    
+    check_button = tk.Button(root, text="Check Solution", command=check_solution)
+    check_button.grid(row=9, column=0, columnspan=3, pady=10)
+    
+    ai_h_button = tk.Button(root, text="Solve with H", command=solve_with_heuristic)
+    ai_h_button.grid(row=9, column=2, columnspan=3, pady=10)
+
+    ai_d_button = tk.Button(root, text="Solve with DFS", command=solve_with_dfs)
+    ai_d_button.grid(row=9, column=4, columnspan=3, pady=10)
+    
+    new_game_button = tk.Button(root, text="New Game", command=new_game)
+    new_game_button.grid(row=9, column=6, columnspan=3, pady=10)
+    
+    root.mainloop()
+
+create_ui()

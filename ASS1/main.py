@@ -25,6 +25,12 @@ def dfs_solve(board):
                 for num in range(1, 10):
                     if is_valid(board, row, col, num):
                         board[row][col] = num
+                        entries[row][col].delete(0, tk.END)
+                        entries[row][col].insert(0, str(num))
+                        entries[row][col].config(fg="blue")
+                        root.update_idletasks()
+                        # time.sleep(0.009) # Chờ 0.1 giây để thấy rõ thay đổi
+                        # root.after(5, dfs_solve)
                         if dfs_solve(board):
                             return True
                         board[row][col] = 0
@@ -56,6 +62,12 @@ def heuristic_solve(board):
 
         for num in candidates:
             board[row][col] = num
+            entries[row][col].delete(0, tk.END)
+            entries[row][col].insert(0, str(num))
+            entries[row][col].config(fg="blue")
+            root.update_idletasks()
+            # time.sleep(0.009) # Chờ 0.1 giây để thấy rõ thay đổi
+            # root.after(10, backtrack)
             if backtrack():
                 return True
             board[row][col] = 0
@@ -87,27 +99,51 @@ def measure_performance(algorithm, board):
     execution_time = end_time - start_time
     return execution_time, memory_used, success
 
-def solve_with_ai():
+def solve_with_dfs():
     global board, entries
     dfs_time, dfs_memory, dfs_success = measure_performance(dfs_solve, board)
+    
+    solved_board = [row[:] for row in board]
+    if dfs_success:
+        dfs_solve(solved_board)
+    else:
+        messagebox.showerror("Error", "AI DFS could not solve the Sudoku.")
+        return
+    
+    # for i in range(9):
+    #     for j in range(9):
+    #         entries[i][j].delete(0, tk.END)
+    #         entries[i][j].insert(0, str(solved_board[i][j]))
+    #         # entries[i][j].config(state='disabled')
+    #         entries[i][j].config(fg="blue")  # Đổi màu cho dễ thấy
+    #         root.update_idletasks()  # Cập nhật giao diện ngay lập tức
+    #         time.sleep(0.2) # Chờ 0.1 giây để thấy rõ thay đổi
+    
+    messagebox.showinfo("Performance", f"DFS: {dfs_time:.4f}s, {dfs_memory:.2f}KB")
+
+def solve_with_heuristic():
+    global board, entries
     heuristic_time, heuristic_memory, heuristic_success = measure_performance(heuristic_solve, board)
     
     solved_board = [row[:] for row in board]
     if heuristic_success:
         heuristic_solve(solved_board)
-    elif dfs_success:
-        dfs_solve(solved_board)
     else:
-        messagebox.showerror("Error", "AI could not solve the Sudoku.")
+        messagebox.showerror("Error", "AI Heuristic could not solve the Sudoku.")
         return
     
-    for i in range(9):
-        for j in range(9):
-            entries[i][j].delete(0, tk.END)
-            entries[i][j].insert(0, str(solved_board[i][j]))
-            entries[i][j].config(state='disabled')
+    # for i in range(9):
+    #     for j in range(9):
+    #         entries[i][j].delete(0, tk.END)
+    #         entries[i][j].insert(0, str(solved_board[i][j]))
+    #         # entries[i][j].config(state='disabled')
+    #         # entries[i][j].insert(0, str(value))
+    #         entries[i][j].config(fg="blue")  # Đổi màu cho dễ thấy
+    #         root.update_idletasks()  # Cập nhật giao diện ngay lập tức
+    #         time.sleep(0.2) # Chờ 0.1 giây để thấy rõ thay đổi
+
     
-    messagebox.showinfo("Performance", f"DFS: {dfs_time:.4f}s, {dfs_memory:.2f}KB\nHeuristic: {heuristic_time:.4f}s, {heuristic_memory:.2f}KB")
+    messagebox.showinfo("Performance", f"Heuristic: {heuristic_time:.4f}s, {heuristic_memory:.2f}KB")
 
 def check_solution():
     for row in range(9):
@@ -156,8 +192,11 @@ def create_ui():
     check_button = tk.Button(root, text="Check Solution", command=check_solution)
     check_button.grid(row=9, column=0, columnspan=3, pady=10)
     
-    ai_button = tk.Button(root, text="Solve with AI", command=solve_with_ai)
-    ai_button.grid(row=9, column=3, columnspan=3, pady=10)
+    ai_h_button = tk.Button(root, text="Solve with H", command=solve_with_heuristic)
+    ai_h_button.grid(row=9, column=2, columnspan=3, pady=10)
+
+    ai_d_button = tk.Button(root, text="Solve with DFS", command=solve_with_dfs)
+    ai_d_button.grid(row=9, column=4, columnspan=3, pady=10)
     
     new_game_button = tk.Button(root, text="New Game", command=new_game)
     new_game_button.grid(row=9, column=6, columnspan=3, pady=10)

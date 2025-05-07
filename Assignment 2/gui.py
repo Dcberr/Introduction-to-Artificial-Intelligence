@@ -3,7 +3,7 @@ from tkinter import messagebox, Button, Frame, Label, OptionMenu, StringVar, Rad
 import time
 import numpy as np
 import random
-from logic import (
+from CaroAI import (
     create_board, find_best_move, check_win, evaluate_board, get_pattern,
     PLAYER, OPPONENT, EMPTY, BOARD_SIZE, PATTERN_SCORES, DIRECTIONS
 )
